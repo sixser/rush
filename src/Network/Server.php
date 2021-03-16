@@ -5,12 +5,15 @@ declare(strict_types = 1);
 namespace Rush\Network;
 
 use Closure;
+use Rush\Log\LoggerAwareTrait;
 
 const OS_TYPE_LINUX = 1;
 const OS_TYPE_WINDOWS = 2;
 
 class Server
 {
+    use LoggerAwareTrait;
+
     /**
      * Operate System Type
      * @var int
@@ -179,10 +182,12 @@ class Server
         $new_socket = stream_socket_accept($socket, 0);
         stream_set_blocking($new_socket, false);
 
-        (new Tcp($new_socket))->withAction('connect', $this->on_connect)
+        (new Tcp($new_socket))
+            ->withAction('connect', $this->on_connect)
             ->withAction('message', $this->on_message)
             ->withAction('close', $this->on_close)
             ->withAction('error', $this->on_error)
+            ->withLogger($this->logger)
             ->establish();
     }
 

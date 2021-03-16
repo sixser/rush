@@ -19,10 +19,12 @@ trait LoggerAwareTrait
     /**
      * Sets a logger.
      * @param LoggerInterface $logger
-     * @return void
+     * @return static
      */
-    public function setLogger(LoggerInterface $logger): void
+    public function withLogger(LoggerInterface $logger): static
     {
         $this->logger = $logger;
+
+        return $this;
     }
 }
