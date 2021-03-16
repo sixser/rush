@@ -1,0 +1,36 @@
+{
+  "name": "sixser/rush",
+  "description": "A PHP Server Framework",
+  "keywords": ["rush", "sixser", "php"],
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Aaron Lee",
+      "email": "sixser@foxmail.com"
+    }
+  ],
+  "require": {
+    "php": "^8.0",
+    "ext-event": "*",
+    "ext-pcntl": "*",
+    "ext-posix": "*"
+  },
+  "autoload": {
+    "files": [
+      "src/function.php"
+    ],
+    "psr-4": {
+      "Rush\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Test\\": "test/"
+    }
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true,
+  "require-dev": {
+  }
+}
