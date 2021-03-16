@@ -8,27 +8,13 @@ use Closure;
 use Rush\Log\LoggerAwareTrait;
 use Throwable;
 
+/**
+ * Class Tcp
+ * @package Rush\Network
+ */
 class Tcp extends ConnectionAbstract
 {
     use LoggerAwareTrait;
-
-    /**
-     * Run Application Wait Data
-     * @var int
-     */
-    public const RUN_WAIT = 1;
-
-    /**
-     * Run Application Ok
-     * @var int
-     */
-    public const RUN_OK = 0;
-
-    /**
-     * Run Application Error
-     * @var int
-     */
-    public const RUN_ERROR = -1;
 
     /**
      * Status Initial
@@ -109,10 +95,23 @@ class Tcp extends ConnectionAbstract
     protected string $out_buffer = '';
 
     /**
+     * Application Protocol
+     * @var string
+     */
+    protected string $protocol = '';
+
+    /**
+     * Current Package Length
+     * @var int
+     */
+    protected int $pkt_len = 0;
+
+    /**
      * Tcp constructor
      * @param mixed $socket Socket of connection.
+     * @param string $protocol Application protocol
      */
-    public function __construct(mixed $socket)
+    public function __construct(mixed $socket, string $protocol = '')
     {
         $this->status = static::STATUS_INITIAL;
 
@@ -125,6 +124,8 @@ class Tcp extends ConnectionAbstract
 
         stream_set_blocking($this->socket, false);
         stream_set_read_buffer($this->socket, 0);
+
+        $this->protocol = class_exists($protocol) === true ? $protocol : '';
     }
 
     /**
@@ -156,8 +157,7 @@ class Tcp extends ConnectionAbstract
     {
         $this->status = static::STATUS_CONNECTING;
 
-        $res = $this->trigger('connect');
-        if ($res === static::RUN_ERROR) $this->close();
+        $this->trigger('connect');
 
         Reactor::getInstance()->add($this->socket, Reactor::READ, Closure::fromCallable([$this, 'read']));
 
@@ -201,7 +201,7 @@ class Tcp extends ConnectionAbstract
         $buffer = fread($socket, static::$buffer_size);
         if ($buffer === false) {
             if (is_resource($socket) === false || feof($socket) === true) {
-                $this->close();
+                $this->destroy();
             }
 
             return;
@@ -209,11 +209,42 @@ class Tcp extends ConnectionAbstract
 
         $this->in_buffer .= $buffer;
 
-        $res = $this->trigger('message', $this->in_buffer);
-        if ($res === static::RUN_WAIT) return;
-        if ($res === static::RUN_ERROR) $this->close();
+        if (empty($this->protocol) === true) {
+            $this->trigger('message', $this->in_buffer);
 
-        $this->in_buffer = '';
+            $this->in_buffer = '';
+
+            return;
+        }
+
+        if ($this->pkt_len === 0) {
+            $pktLen = $this->protocol::check($this->in_buffer);
+
+            if (is_string($pktLen) === true) {
+                $this->close($pktLen);
+                return;
+            }
+
+            if ($pktLen === 0) {
+                return;
+            }
+
+            $this->pkt_len = (int) $pktLen;
+        }
+
+        if (strlen($this->in_buffer) < $this->pkt_len) {
+            return;
+        }
+
+        $package = substr($this->in_buffer, 0, $this->pkt_len);
+        if ($package === false) {
+            $this->close();
+        }
+
+        $this->trigger('message', $package);
+
+        $this->in_buffer = (string) substr($this->in_buffer, $this->pkt_len + 1);
+        $this->pkt_len = 0;
     }
 
     /**
@@ -334,9 +365,10 @@ class Tcp extends ConnectionAbstract
      * Trigger the action
      * @param string $action Connection action.
      * @param mixed $param CallBack parameters.
-     * @return mixed
+     * @return void
+     * @throws NetworkException
      */
-    protected function trigger(string $action, mixed ...$param): mixed
+    protected function trigger(string $action, mixed ...$param): void
     {
         try {
             $action = match ($action) {
@@ -347,13 +379,13 @@ class Tcp extends ConnectionAbstract
             };
 
             if (is_callable($this->$action) === false) {
-                return static::RUN_OK;
+                return;
             }
-            
-            return call_user_func($this->$action, $this, ...$param);
+
+            call_user_func($this->$action, $this, ...$param);
         } catch (Throwable $t) {
             $this->logger->error($t->getMessage());
-            return static::RUN_ERROR;
+            $this->destroy();
         }
     }
 

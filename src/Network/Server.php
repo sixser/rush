@@ -10,6 +10,10 @@ use Rush\Log\LoggerAwareTrait;
 const OS_TYPE_LINUX = 1;
 const OS_TYPE_WINDOWS = 2;
 
+/**
+ * Class Server
+ * @package Rush\Network
+ */
 class Server
 {
     use LoggerAwareTrait;
@@ -61,6 +65,12 @@ class Server
      * @var string
      */
     protected string $transport = '';
+
+    /**
+     * Application Protocol
+     * @var string
+     */
+    protected string $protocol = '';
 
     /**
      * Listening Address
@@ -182,7 +192,7 @@ class Server
         $new_socket = stream_socket_accept($socket, 0);
         stream_set_blocking($new_socket, false);
 
-        (new Tcp($new_socket))
+        (new Tcp($new_socket, $this->protocol))
             ->withAction('connect', $this->on_connect)
             ->withAction('message', $this->on_message)
             ->withAction('close', $this->on_close)
@@ -364,6 +374,21 @@ class Server
     public function getNum(): int
     {
         return $this->num;
+    }
+
+    /**
+     * Set application protocol for current server
+     * @param string $protocol Application protocol.
+     * @throws NetworkException
+     * @return void
+     */
+    public function setProtocol(string $protocol): void
+    {
+        if (class_exists($protocol) === false) {
+            throw new NetworkException("Protocol is not exist");
+        }
+
+        $this->protocol = $protocol;
     }
 
     /**

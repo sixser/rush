@@ -7,63 +7,48 @@ namespace Rush\Http;
 use Rush\Http\Message\Request;
 use Rush\Http\Message\Response;
 use Rush\Http\Message\UploadFile;
-use Rush\Network\NetworkException;
-use Rush\Network\Tcp;
+use Rush\Network\ProtocolInterface;
 
 /**
  * Class Protocol
  * @package Rush\Http
  */
-class Protocol
+class Protocol implements ProtocolInterface
 {
     /**
-     * Check package is valid
-     * @param Tcp $conn Tcp connection.
-     * @param string $raw Receive data.
-     * @return int
-     * @throws NetworkException
+     * @inheritDoc
      */
-    public static function check(Tcp $conn, string $raw): int
+    public static function check(string $input): int|string
     {
-        $crlf_pos = strpos($raw, "\r\n\r\n");
-        if ($crlf_pos === false) {
-            if (strlen($raw) >= 16384) {
-                $conn->close("HTTP/1.1 413 Request Entity Too Large\r\n\r\n");
-                return $conn::RUN_ERROR;
+        $crlfPos = strpos($input, "\r\n\r\n");
+        if ($crlfPos === false) {
+            if (strlen($input) >= 16384) {
+                return "HTTP/1.1 413 Request Entity Too Large\r\n\r\n";
             }
 
-            return Tcp::RUN_WAIT;
+            return 0;
         }
 
-        $method = strstr($raw, ' ', true);
+        $method = strstr($input, ' ', true);
 
         if (
             $method === 'GET' || $method === 'HEAD' ||
             $method === 'DELETE' || $method === 'OPTIONS' || $method === 'TRACE'
         ) {
-            return Tcp::RUN_OK;
+            return $crlfPos + 4;
         }
 
         if ($method !== 'POST' && $method !== 'PUT' && $method !== 'PATCH') {
-            $conn->close("HTTP/1.1 400 Bad Request\r\n\r\n");
-            return $conn::RUN_ERROR;
+            return "HTTP/1.1 400 Bad Request\r\n\r\n";
         }
 
-        $header = substr($raw, 0, $crlf_pos);
+        $header = substr($input, 0, $crlfPos);
         preg_match("/\r\ncontent-length: ?(\d+)/i", $header, $match);
-        if (isset($match[1]) === false) {
-            $conn->close("HTTP/1.1 400 Bad Request\r\n\r\n");
-            return $conn::RUN_ERROR;
+        if (isset($match[1]) === false || is_numeric($match[1]) === false) {
+            return "HTTP/1.1 400 Bad Request\r\n\r\n";
         }
 
-        $package_size = $crlf_pos + 4 + $match[1];
-        $receive_raw = strlen($raw);
-
-        if ($receive_raw < $package_size) return Tcp::RUN_WAIT;
-        if ($receive_raw == $package_size) return Tcp::RUN_OK;
-
-        $conn->close("HTTP/1.1 400 Bad Request\r\n\r\n");
-        return $conn::RUN_ERROR;
+        return $crlfPos + 4 + (int) $match[1];
     }
 
     /**
