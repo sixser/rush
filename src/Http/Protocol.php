@@ -221,7 +221,7 @@ class Protocol implements ProtocolInterface
     /**
      * Compile http response message
      * @param string $version Http protocol version.
-     * @param integer $code Http response status code.
+     * @param int $code Http response status code.
      * @param string $phrase Http response phrase.
      * @param array $headers Http response header.
      * @param string $body Http response body.

@@ -4,17 +4,21 @@ declare(strict_types = 1);
 
 namespace Rush\Config;
 
+use ArrayIterator;
+use Countable;
+use IteratorAggregate;
+
 /**
  * Class ConfigItem
  * @package Rush\Config
  */
-class ConfigItem
+class ConfigItem implements Countable, IteratorAggregate
 {
     /**
      * Current ConfigItem Value
      * @var bool|int|string|null
      */
-    protected string|int|bool|null $value;
+    protected bool|int|string|null $value;
 
     /**
      * Child Options
@@ -111,10 +115,35 @@ class ConfigItem
 
     /**
      * Convert child options to array
-     * @return array
+     * @return bool|int|string|array|null
      */
-    public function toArray(): array
+    public function toArray(): bool|int|string|array|null
     {
-        return $this->options;
+        if (empty($this->options) === true) {
+            return $this->value;
+        }
+
+        $options = [];
+        foreach ($this->options as $key => $value) {
+            $options[$key] = $value->toArray();
+        }
+
+        return $options;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function count(): int
+    {
+        return count($this->options);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getIterator(): ArrayIterator
+    {
+        return new ArrayIterator($this->options);
     }
 }

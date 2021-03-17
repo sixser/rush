@@ -111,7 +111,7 @@ class Response extends Message
 
     /**
      * Set status code && phrase
-     * @param integer $code Status code.
+     * @param int $code Status code.
      * @param string $reason Status phrase.
      * @return static
      */

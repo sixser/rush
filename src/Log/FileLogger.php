@@ -16,6 +16,24 @@ class FileLogger implements LoggerInterface
     use LoggerTrait;
 
     /**
+     * Normal Mode
+     * @var int
+     */
+    public const MODE_NORMAL = 0;
+
+    /**
+     * Debug Mode
+     * @var int
+     */
+    public const MODE_DEBUG = 1;
+
+    /**
+     * Ignore Mode
+     * @var int
+     */
+    public const MODE_IGNORE = 2;
+
+    /**
      * Direction Path
      * @var string
      */
@@ -46,10 +64,10 @@ class FileLogger implements LoggerInterface
     protected array $buffer = [];
 
     /**
-     * Enable Debug
-     * @var bool
+     * Record Mode
+     * @var int
      */
-    protected bool $debug = false;
+    protected int $mode = 0;
 
     /**
      * Set log file path
@@ -70,7 +88,7 @@ class FileLogger implements LoggerInterface
 
     /**
      * Set log buffer size
-     * @param integer $size Max message size.
+     * @param int $size Max message size.
      * @return static
      */
     public function withSize(int $size): static
@@ -105,13 +123,18 @@ class FileLogger implements LoggerInterface
     }
 
     /**
-     * Set debug mode status
-     * @param bool $debug Status.
+     * Set record mode
+     * @param int $model Record mode.
      * @return static
+     * @throws LogException
      */
-    public function withDebug(bool $debug): static
+    public function withMode(int $model): static
     {
-        $this->debug = $debug;
+        if (in_array($model, [static::MODE_NORMAL, static::MODE_DEBUG, static::MODE_IGNORE]) === false) {
+            throw new LogException("Mode is not supported");
+        }
+
+        $this->mode = $model;
 
         return $this;
     }
@@ -125,14 +148,18 @@ class FileLogger implements LoggerInterface
 
         $content = $this->prepare($level, $message);
 
-        if ($this->debug ===  true) {
-            echo "{$content}\n";
-        }
-
-        $this->buffer[] = $content;
-
-        if ($this->checkSize() === false) {
-            $this->flushBuffer();
+        switch ($this->mode) {
+            case static::MODE_NORMAL:
+                $this->buffer[] = $content;
+                if ($this->checkSize() === false) {
+                    $this->flushBuffer();
+                }
+                break;
+            case static::MODE_DEBUG:
+                echo "{$content}\n";
+                break;
+            case static::MODE_IGNORE:
+                break;
         }
     }
 
