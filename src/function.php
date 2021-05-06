@@ -34,3 +34,46 @@ if (function_exists('get_dir_files') === false) {
         return $files;
     }
 }
+
+if (function_exists('get_class_from_file') === false) {
+    /**
+     * Parse class full name from file
+     * @param string $filename File full name.
+     * @return string
+     */
+    function get_class_from_file(string $filename): string
+    {
+        $namespace = $class = '';
+        $getNamespace = $getClass = false;
+
+        $contents = file_get_contents($filename);
+        foreach (token_get_all($contents) as $token) {
+            // found flag, and will be getting namespace or classname
+            if ($getNamespace === true) {
+                if (is_array($token) && $token[0] == T_NAME_QUALIFIED) {
+                    $namespace .= $token[1];
+                } else if (is_string($token) && $token === ';') {
+                    $getNamespace = false;
+                }
+            } elseif ($getClass === true) {
+                if (is_array($token) && $token[0] == T_STRING) {
+                    $class = $token[1];
+                    break;
+                }
+            }
+
+            // check namespace or classname flag
+            if (is_array($token) && $token[0] == T_NAMESPACE) {
+                $getNamespace = true;
+            } elseif (is_array($token) && $token[0] == T_CLASS) {
+                $getClass = true;
+            }
+        }
+
+        if (empty($class) === true) {
+            return '';
+        }
+
+        return $namespace ? $namespace . '\\' . $class : $class;
+    }
+}

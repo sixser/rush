@@ -111,6 +111,8 @@ class Container
     {
         $reflectFunc = new ReflectionFunction($name);
 
+        $this->parseAttribute($reflectFunc);
+
         $args = $this->parseArgs($reflectFunc, $vars);
 
         return $reflectFunc->invokeArgs($args);
@@ -128,6 +130,8 @@ class Container
     {
         $reflectClass = new ReflectionClass($name);
 
+        $this->parseAttribute($reflectClass);
+
         $constructor = $reflectClass->getConstructor();
         if ($constructor instanceof ReflectionMethod && $constructor->isPublic() === true) {
             $args = $this->parseArgs($constructor, $vars);
@@ -139,7 +143,7 @@ class Container
 
     /**
      * Parse params of the function or method
-     * @param ReflectionFunctionAbstract $reflect Reflection Object.
+     * @param ReflectionFunctionAbstract $reflect Reflection object.
      * @param array $vars Parameters to initiate the closure.
      * @return array
      * @throws ReflectionException
@@ -151,8 +155,9 @@ class Container
     }
 
     /**
-     * @param ReflectionParameter $parameter
-     * @param array $vars
+     * Inject arguments by parameter name and type
+     * @param ReflectionParameter $parameter Reflection object.
+     * @param array $vars Arguments
      * @return mixed
      * @throws ReflectionException
      * @throws IocException
@@ -178,12 +183,33 @@ class Container
             return $parameter->getDefaultValue();
         }
 
-        throw new IocException("Method parameters missing({$name})");
+        throw new IocException("Method parameters missing($name)");
+    }
+
+    /**
+     * Parse attribute
+     * @param ReflectionClass|ReflectionFunctionAbstract $reflect Reflection object.
+     */
+    protected function parseAttribute(ReflectionClass|ReflectionFunctionAbstract $reflect)
+    {
+        if ($reflect instanceof ReflectionClass) {
+            foreach ($reflect->getAttributes() as $attribute) {
+                $attribute->newInstance();
+            }
+
+            foreach ($reflect->getMethods() as $method) {
+                $this->parseAttribute($method);
+            }
+        } elseif ($reflect instanceof ReflectionFunctionAbstract) {
+            foreach ($reflect->getAttributes() as $attribute) {
+                $attribute->newInstance();
+            }
+        }
     }
 
     /**
      * Undocumented function
-     * @param string $name
+     * @param string $name Name of class, closure and alias.
      * @return bool
      */
     public function look(string $name): bool

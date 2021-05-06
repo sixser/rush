@@ -7,6 +7,9 @@ namespace Rush\Http;
 use Closure;
 use Rush\Http\Message\Request;
 use Rush\Http\Message\Response;
+use Rush\Http\Route\Router;
+use Rush\Ioc\Container;
+use Rush\Ioc\IocException;
 
 /**
  * Class Handler
@@ -15,8 +18,8 @@ use Rush\Http\Message\Response;
 class Handler
 {
     /**
-     * All Middleware
-     * @var array
+     * All The Middlewares
+     * @var string[]
      */
     protected array $middlewares = [];
 
@@ -28,9 +31,9 @@ class Handler
 
     /**
      * Route Target
-     * @var Closure|null
+     * @var string|Closure|null
      */
-    protected Closure|null $target = null;
+    protected string|Closure|null $target = null;
 
     /**
      * Set http router
@@ -45,60 +48,35 @@ class Handler
     }
 
     /**
-     * Set base http middleware
-     * @param string ...$middleware Http middleware.
-     * @return static
-     */
-    public function withMiddlewares(string ...$middleware): static
-    {
-        array_push($this->middlewares, ...$middleware);
-
-        return $this;
-    }
-
-    /**
      * Handle http request
      * @param Request $request Http request.
      * @return Response
      * @throws HttpException
+     * @throws IocException
      */
     public function handle(Request $request): Response
     {
-        if (is_callable($this->target) === false) {
-            $this->dispatch($request->getMethod(), $request->getUri());
+        if (is_null($this->target) === true) {
+            $this->dispatch($request->getUri(), $request->getMethod());
         }
 
         if (empty($this->middlewares) === true) {
-            if (is_callable($this->target) === true) {
-                $response = call_user_func($this->target, $request);
-                $this->target = null;
-            }
-
-            if (isset($response) === true && $response instanceof Response) {
-                return $response;
-            } else {
-                return (new Response())
-                    ->withStatus(200, 'OK')
-                    ->withHeader('Content-Type', 'text/html;charset=utf8')
-                    ->withHeader('Connection', 'keep-alive')
-                    ->withHeader('Content-Length', '14')
-                    ->withContent('Hello, World! ');
-            }
+            return $this->call($request);
         }
 
-        $middleware = array_shift($this->middlewares);
+        $middleware = array_pop($this->middlewares);
 
         return (new $middleware())->process($request, $this);
     }
 
     /**
      * Dispatch http route
-     * @param string $method Http request method.
      * @param string $uri Http request uri.
+     * @param string $method Http request method.
      * @return void
      * @throws HttpException
      */
-    protected function dispatch(string $method, string $uri): void
+    protected function dispatch(string $uri, string $method): void
     {
         if ($this->router instanceof Router === false) {
             return;
@@ -106,12 +84,33 @@ class Handler
 
         $path = (string) parse_url($uri, PHP_URL_PATH);
 
-        $rule = $this->router->parse($method, $path);
+        [$this->target, $this->middlewares] = $this->router->parse($path, $method);
+    }
 
-        $this->target = $rule['target'];
-
-        if (empty($rule['middleware']) === false) {
-            $this->middlewares[] = $rule['middleware'];
+    /**
+     * Call the target
+     * @param Request $request Http request.
+     * @return Response
+     * @throws IocException
+     */
+    protected function call(Request $request): Response
+    {
+        if (is_callable($this->target) === true) {
+            $response =  call_user_func($this->target, $request);
+        } elseif (is_string($this->target) === true) {
+            [$class, $method] = explode('@', $this->target);
+            $response = Container::getInstance()->make($class)->$method($request);
+        } else {
+            $response = (new Response())
+                ->withStatus(200, 'OK')
+                ->withHeader('Content-Type', 'text/html;charset=utf8')
+                ->withHeader('Connection', 'keep-alive')
+                ->withHeader('Content-Length', '14')
+                ->withContent('Hello Rush! ');
         }
+
+        $this->target = null;
+
+        return $response;
     }
 }
