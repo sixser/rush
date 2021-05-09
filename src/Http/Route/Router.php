@@ -25,7 +25,7 @@ class Router
      */
     public static function register(Rule $rule): void
     {
-        $path = static::filter($rule->getPath());
+        $path = trim($rule->getPath(), '/');
 
         static::$rules[$path] = $rule;
     }
@@ -39,37 +39,15 @@ class Router
      */
     public static function parse(string $path, string $method): array
     {
-        $path = static::filter($path);
+        $path = trim($path, '/');
 
-        if (isset(static::$rules[$path]) === false) {
-            throw new HttpException('There are no matching routing rules');
-        }
+        ! isset(static::$rules[$path]) &&
+        throw new HttpException("Failed to parse route rule, $path does not matched.");
 
-        if (
-            empty(static::$rules[$path]->getMethods()) === false &&
-            in_array(strtoupper($method), static::$rules[$path]->getMethods(), true) === false
-        ) {
-            throw new HttpException('Current path is restricted');
-        }
+        ! empty(static::$rules[$path]->getMethods()) &&
+        ! in_array(strtoupper($method), static::$rules[$path]->getMethods()) &&
+        throw new HttpException("Failed to parse route rule, $method is restricted.");
 
         return [static::$rules[$path]->getTarget(), static::$rules[$path]->getMiddlewares()];
-    }
-
-    /**
-     * Filter '/' at the begin and end of the path
-     * @param string $path Route path.
-     * @return string
-     */
-    protected static function filter(string $path): string
-    {
-        if (str_starts_with($path, '/') === true) {
-            $path = substr($path, 1);
-        }
-
-        if (str_ends_with($path, '/') === true) {
-            $path = substr($path, 0, -1);
-        }
-
-        return $path;
     }
 }

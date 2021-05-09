@@ -78,16 +78,15 @@ abstract class SessionAbstract
     }
 
     /**
-     * Get session name
+     * Set session name
      * @param string $name Session name.
      * @return void
      * @throws HttpException
      */
     public static function setName(string $name): void
     {
-        if (empty($name) === true) {
-            throw new HttpException("Session name cannot be empty");
-        }
+        empty($name) &&
+        throw new HttpException("Failed to set session name, $name is not a valid value");
 
         static::$name = $name;
     }
@@ -136,7 +135,7 @@ abstract class SessionAbstract
      */
     public function exist(string $name): bool
     {
-        return isset($this->data[$name]) === true;
+        return isset($this->data[$name]);
     }
 
     /**

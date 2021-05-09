@@ -21,7 +21,7 @@ abstract class Facade
     {
         $name = static::getCallName();
 
-        if (Container::getInstance()->look($name) === false) {
+        if (! Container::getInstance()->look($name)) {
             Container::getInstance()->inject($name, static::getCallClass());
         }
 

@@ -14,115 +14,115 @@ use Rush\Http\HttpException;
 class Register
 {
     /**
-     * Group Middlewares
-     * @var array
-     */
-    protected static array $global_middlewares = [];
-
-    /**
      * Group Class
      * @var string
      */
-    protected static string $global_class = '';
+    protected static string $group_class = '';
 
     /**
      * Group Name
      * @var string
      */
-    protected static string $global_prefix = '';
+    protected static string $group_prefix = '';
 
     /**
-     * Current Middlewares
+     * Group Middlewares
      * @var array
      */
-    protected array $current_middlewares;
+    protected static array $group_middlewares = [];
 
     /**
      * Current Target
      * @var string|Closure
      */
-    protected string|Closure $current_method;
-
-    /**
-     * Current Http Methods
-     * @var array
-     */
-    protected array $current_methods;
+    protected string|Closure $target;
 
     /**
      * Current Path
      * @var string
      */
-    protected string $current_path;
+    protected string $path;
 
     /**
-     * Set group middlewares
-     * @param array $global_middlewares All middlewares class full name.
-     * @return void
+     * Current Http Methods
+     * @var array
      */
-    public static function setGlobalMiddlewares(array $global_middlewares): void
-    {
-        self::$global_middlewares = $global_middlewares;
-    }
+    protected array $methods;
+
+    /**
+     * Current Middlewares
+     * @var array
+     */
+    protected array $middlewares;
 
     /**
      * Set group class
-     * @param string $global_class Class name.
+     * @param string $class Class name.
      * @return void
      */
-    public static function setGlobalClass(string $global_class): void
+    public static function setGroupClass(string $class): void
     {
-        self::$global_class = $global_class;
+        self::$group_class = $class;
     }
 
     /**
      * Set group name
-     * @param string $global_prefix Path prefix.
+     * @param string $prefix Path prefix.
      * @return void
      */
-    public static function setGlobalPrefix(string $global_prefix): void
+    public static function setGroupPrefix(string $prefix): void
     {
-        self::$global_prefix = $global_prefix;
+        self::$group_prefix = $prefix;
     }
 
     /**
-     * Set current middlewares
-     * @param array $current_middlewares All middlewares class full name.
+     * Set group middlewares
+     * @param array $middlewares All middlewares class name of the group.
      * @return void
      */
-    public function setCurrentMiddlewares(array $current_middlewares): void
+    public static function setGroupMiddlewares(array $middlewares): void
     {
-        $this->current_middlewares = $current_middlewares;
+        self::$group_middlewares = $middlewares;
     }
 
     /**
      * Set current target
-     * @param string|Closure $current_method Class method name and anonymous function.
+     * @param string|Closure $target Class method name and anonymous function.
      * @return void
      */
-    public function setCurrentMethod(string|Closure $current_method): void
+    public function setTarget(string|Closure $target): void
     {
-        $this->current_method = $current_method;
-    }
-
-    /**
-     * Set current methods
-     * @param array $current_methods Http methods that allowed.
-     * @return void
-     */
-    public function setCurrentMethods(array $current_methods): void
-    {
-        $this->current_methods = $current_methods;
+        $this->target = $target;
     }
 
     /**
      * Set current path
-     * @param string $current_path Access path.
+     * @param string $path Access path.
      * @return void
      */
-    public function setCurrentPath(string $current_path): void
+    public function setPath(string $path): void
     {
-        $this->current_path = $current_path;
+        $this->path = $path;
+    }
+
+    /**
+     * Set current methods
+     * @param array $methods Http methods that allowed.
+     * @return void
+     */
+    public function setMethods(array $methods): void
+    {
+        $this->methods = $methods;
+    }
+
+    /**
+     * Set current middlewares
+     * @param array $middlewares All middlewares class name of the rule.
+     * @return void
+     */
+    public function setMiddlewares(array $middlewares): void
+    {
+        $this->middlewares = $middlewares;
     }
 
     /**
@@ -133,10 +133,10 @@ class Register
     public function execute(): void
     {
         $rule = new Rule(
-            static::$global_prefix . $this->current_path,
-            is_string($this->current_method) ? static::$global_class.'@'.$this->current_method : $this->current_method,
-            $this->current_methods,
-            array_merge(static::$global_middlewares, $this->current_middlewares)
+            static::$group_prefix . $this->path,
+            is_string($this->target) ? static::$group_class.'@'.$this->target : $this->target,
+            $this->methods,
+            array_merge(static::$group_middlewares, $this->middlewares)
         );
 
         Router::register($rule);

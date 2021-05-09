@@ -125,7 +125,7 @@ class Tcp extends ConnectionAbstract
         stream_set_blocking($this->socket, false);
         stream_set_read_buffer($this->socket, 0);
 
-        $this->protocol = class_exists($protocol) === true ? $protocol : '';
+        $this->protocol = class_exists($protocol) ? $protocol : '';
     }
 
     /**
@@ -159,7 +159,9 @@ class Tcp extends ConnectionAbstract
 
         $this->trigger('connect');
 
-        Reactor::getInstance()->add($this->socket, Reactor::READ, Closure::fromCallable([$this, 'read']));
+        Reactor::getInstance()->add(
+            $this->socket, Reactor::READ, Closure::fromCallable([$this, 'read'])
+        );
 
         $this->status = static::STATUS_ESTABLISHED;
     }
@@ -171,9 +173,10 @@ class Tcp extends ConnectionAbstract
      */
     public function pause(): void
     {
-        if ($this->pause === true) return;
+        if (true === $this->pause) return;
 
         Reactor::getInstance()->del($this->socket, Reactor::WRITE);
+
         $this->pause = true;
     }
 
@@ -184,9 +187,12 @@ class Tcp extends ConnectionAbstract
      */
     public function resume(): void
     {
-        if ($this->pause === false) return;
+        if (false === $this->pause) return;
 
-        Reactor::getInstance()->add($this->socket, Reactor::READ, Closure::fromCallable([$this, 'read']));
+        Reactor::getInstance()->add(
+            $this->socket, Reactor::READ, Closure::fromCallable([$this, 'read'])
+        );
+
         $this->pause = false;
     }
 
@@ -199,8 +205,8 @@ class Tcp extends ConnectionAbstract
     public function read(mixed $socket): void
     {
         $buffer = fread($socket, static::$buffer_size);
-        if ($buffer === false) {
-            if (is_resource($socket) === false || feof($socket) === true) {
+        if (false === $buffer) {
+            if (! is_resource($socket) || feof($socket)) {
                 $this->destroy();
             }
 
@@ -209,7 +215,7 @@ class Tcp extends ConnectionAbstract
 
         $this->in_buffer .= $buffer;
 
-        if (empty($this->protocol) === true) {
+        if (empty($this->protocol)) {
             $this->trigger('message', $this->in_buffer);
 
             $this->in_buffer = '';
@@ -217,33 +223,26 @@ class Tcp extends ConnectionAbstract
             return;
         }
 
-        if ($this->pkt_len === 0) {
+        if (0 === $this->pkt_len) {
             $pktLen = $this->protocol::check($this->in_buffer);
 
-            if (is_string($pktLen) === true) {
+            if (is_string($pktLen)) {
                 $this->close($pktLen);
                 return;
             }
 
-            if ($pktLen === 0) {
-                return;
-            }
+            if (0 === $pktLen) return;
 
             $this->pkt_len = (int) $pktLen;
         }
 
-        if (strlen($this->in_buffer) < $this->pkt_len) {
-            return;
-        }
+        if (strlen($this->in_buffer) < $this->pkt_len) return;
 
         $package = substr($this->in_buffer, 0, $this->pkt_len);
-        if ($package === false) {
-            $this->close();
-        }
 
         $this->trigger('message', $package);
 
-        $this->in_buffer = (string) substr($this->in_buffer, $this->pkt_len + 1);
+        $this->in_buffer = substr($this->in_buffer, $this->pkt_len + 1);
         $this->pkt_len = 0;
     }
 
@@ -255,13 +254,13 @@ class Tcp extends ConnectionAbstract
     public function write(): void
     {
         $length = fwrite($this->socket, $this->out_buffer, 8192);
-        if ($length === false) {
+        if (false === $length) {
             $this->close();
             return;
         }
 
-        $this->out_buffer = (string) substr($this->out_buffer, $length);
-        if ($this->out_buffer === '') {
+        $this->out_buffer = substr($this->out_buffer, $length);
+        if ('' === $this->out_buffer) {
             Reactor::getInstance()->del($this->socket, Reactor::WRITE);
         }
     }
@@ -274,20 +273,23 @@ class Tcp extends ConnectionAbstract
      */
     public function send(string $data): void
     {
-        if ($this->status === static::STATUS_CLOSING || $this->status === static::STATUS_CLOSED) {
+        if (
+            static::STATUS_CLOSING === $this->status ||
+            static::STATUS_CLOSED === $this->status
+        ) {
             return;
         }
 
         // Write event is added, add to the end
-        if ($this->out_buffer !== '') {
+        if ('' !== $this->out_buffer) {
             $this->out_buffer .= $data;
             return;
         }
 
         // Attempt send directly
         $length = fwrite($this->socket, $data);
-        if ($length === false) {
-            if (is_resource($this->socket) === false || feof($this->socket) === true) {
+        if (false === $length) {
+            if (! is_resource($this->socket) || feof($this->socket)) {
                 $this->trigger('error');
                 $this->close();
             }
@@ -295,9 +297,11 @@ class Tcp extends ConnectionAbstract
             return;
         }
 
-        $this->out_buffer = (string) substr($data, (int) $length);
-        if ($this->out_buffer !== '') {
-            Reactor::getInstance()->add($this->socket, Reactor::WRITE, Closure::fromCallable([$this, 'write']));
+        $this->out_buffer = substr($data, $length);
+        if ('' !== $this->out_buffer) {
+            Reactor::getInstance()->add(
+                $this->socket, Reactor::WRITE, Closure::fromCallable([$this, 'write'])
+            );
         }
     }
 
@@ -318,20 +322,23 @@ class Tcp extends ConnectionAbstract
      */
     public function close(string $data = ''): void
     {
-        if ($this->status === self::STATUS_CONNECTING) {
+        if (self::STATUS_CONNECTING === $this->status) {
             $this->destroy();
             return;
         }
 
-        if ($this->status === self::STATUS_CLOSING || $this->status === self::STATUS_CLOSED) {
+        if (
+            self::STATUS_CLOSING === $this->status ||
+            self::STATUS_CLOSED === $this->status
+        ) {
             return;
         }
 
-        if ($data !== '') $this->send($data);
+        if ('' !== $data) $this->send($data);
 
         $this->status = self::STATUS_CLOSING;
 
-        if ($this->out_buffer === '') {
+        if ('' === $this->out_buffer) {
             $this->destroy();
         } else {
             $this->pause();
@@ -345,9 +352,7 @@ class Tcp extends ConnectionAbstract
      */
     public function destroy(): void
     {
-        if ($this->status === self::STATUS_CLOSED) {
-            return;
-        }
+        if (self::STATUS_CLOSED === $this->status) return;
 
         Reactor::getInstance()->del($this->socket, Reactor::READ);
         Reactor::getInstance()->del($this->socket, Reactor::WRITE);
@@ -378,9 +383,7 @@ class Tcp extends ConnectionAbstract
                 'error' => 'on_error'
             };
 
-            if (is_callable($this->$action) === false) {
-                return;
-            }
+            if (! is_callable($this->$action)) return;
 
             call_user_func($this->$action, $this, ...$param);
         } catch (Throwable $t) {
@@ -397,9 +400,8 @@ class Tcp extends ConnectionAbstract
      */
     public static function setBufferSize(int $size): void
     {
-        if ($size <= 0) {
-            throw new NetworkException("Read buffer size must larger than 0");
-        }
+        $size <= 0 &&
+        throw new NetworkException("Failed to set buffer size, $size is not a valid size.");
 
         static::$buffer_size = $size;
     }

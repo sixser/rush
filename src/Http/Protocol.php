@@ -21,7 +21,7 @@ class Protocol implements ProtocolInterface
     public static function check(string $input): int|string
     {
         $crlfPos = strpos($input, "\r\n\r\n");
-        if ($crlfPos === false) {
+        if (false === $crlfPos) {
             if (strlen($input) >= 16384) {
                 return "HTTP/1.1 413 Request Entity Too Large\r\n\r\n";
             }
@@ -32,19 +32,19 @@ class Protocol implements ProtocolInterface
         $method = strstr($input, ' ', true);
 
         if (
-            $method === 'GET' || $method === 'HEAD' ||
-            $method === 'DELETE' || $method === 'OPTIONS' || $method === 'TRACE'
+            'GET' === $method || 'HEAD' === $method ||
+            'DELETE' === $method || 'OPTIONS' === $method || 'TRACE' === $method
         ) {
             return $crlfPos + 4;
         }
 
-        if ($method !== 'POST' && $method !== 'PUT' && $method !== 'PATCH') {
+        if ('POST' !== $method && 'PUT' !== $method && 'PATCH' !== $method) {
             return "HTTP/1.1 400 Bad Request\r\n\r\n";
         }
 
         $header = substr($input, 0, $crlfPos);
         preg_match("/\r\ncontent-length: ?(\d+)/i", $header, $match);
-        if (isset($match[1]) === false || is_numeric($match[1]) === false) {
+        if (! isset($match[1]) || ! is_numeric($match[1])) {
             return "HTTP/1.1 400 Bad Request\r\n\r\n";
         }
 
@@ -71,14 +71,14 @@ class Protocol implements ProtocolInterface
         }
 
         $cookies = $request->getHeader('Cookie', '');
-        if (empty($cookies) === false) {
+        if (! empty($cookies)) {
             parse_str(str_replace('; ', '&', $cookies), $cookies);
             foreach ($cookies as $name => $value) {
                 $request->withCookie($name, $value);
             }
         }
 
-        $queryString = (string)parse_url($uri, PHP_URL_QUERY);
+        $queryString = (string) parse_url($uri, PHP_URL_QUERY);
         parse_str($queryString, $query);
         foreach ($query as $name => $val) {
             $request->withQuery($name, $val);
@@ -152,30 +152,30 @@ class Protocol implements ProtocolInterface
     protected static function parseBody(string $rawBody, string $contentType): array
     {
         $parsed = $files = [];
-        if (empty($rawBody) === true) {
+        if (empty($rawBody)) {
             return [$parsed, $files];
         }
 
-        if (str_contains($contentType, 'json') === true) {
+        if (str_contains($contentType, 'json')) {
             $parsed = (array) json_decode($rawBody, true);
-        } elseif (str_contains($contentType, 'form-data') === true) {
+        } elseif (str_contains($contentType, 'form-data')) {
             $boundary = '--' . strstr($contentType, '--') . "\r\n";
-            $rawBody = substr($rawBody, 0, -strlen($boundary)-2);
+            $rawBody = substr($rawBody, 0, - strlen($boundary) - 2);
             foreach (explode($boundary, $rawBody) as $boundary_raw) {
-                if (empty($boundary_raw) === true) continue;
+                if (empty($boundary_raw)) continue;
 
                 [$boundary_header, $boundary_value] = explode("\r\n\r\n", $boundary_raw, 2);
                 $boundary_header = strtolower($boundary_header);
                 $boundary_value = substr($boundary_value, 0, -2);
 
                 preg_match('/name="(.*?)"/', $boundary_header, $name);
-                if (empty($name) === true) continue;
+                if (empty($name)) continue;
 
                 preg_match('/filename="(.*?)"/', $boundary_header, $filename);
                 preg_match('/content-type: (.+)?/', $boundary_header, $type);
 
                 // Is not a file
-                if (empty($filename) === true || empty($type) === true) {
+                if (empty($filename) || empty($type)) {
                     $parsed[$name[1]] = $boundary_value;
                     continue;
                 }
@@ -183,7 +183,7 @@ class Protocol implements ProtocolInterface
                 // Is a file
                 $error = UPLOAD_ERR_OK;
                 $tmp_name = tempnam(sys_get_temp_dir(), 'rush_upload_');
-                if ($tmp_name === false || file_put_contents($tmp_name, $boundary_value) === false) {
+                if (false === $tmp_name || false === file_put_contents($tmp_name, $boundary_value)) {
                     $error = UPLOAD_ERR_CANT_WRITE;
                 }
 

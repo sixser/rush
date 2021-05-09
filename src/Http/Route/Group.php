@@ -15,14 +15,14 @@ class Group
 {
     /**
      * Group constructor.
-     * @param string $class Full class name.
+     * @param string $class Class name.
      * @param string $prefix Access path prefix.
      * @param array $middlewares Group middlewares.
      */
     public function __construct(string $class, string $prefix = '', array $middlewares = [])
     {
-        Register::setGlobalClass($class);
-        Register::setGlobalPrefix($prefix);
-        Register::setGlobalMiddlewares($middlewares);
+        Register::setGroupClass($class);
+        Register::setGroupPrefix($prefix);
+        Register::setGroupMiddlewares($middlewares);
     }
 }

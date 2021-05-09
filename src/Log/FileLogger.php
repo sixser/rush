@@ -77,9 +77,8 @@ class FileLogger implements LoggerInterface
      */
     public function withPath(string $path): static
     {
-        if (is_dir($path) === false && mkdir($path, 0777, true) === false) {
-            throw new LogException("Fail to create directory({$path})");
-        }
+        ! is_dir($path) && ! mkdir($path, 0777, true) &&
+        throw new LogException("Failed to set path, an error occurred while making $path");
 
         $this->path = $path;
         
@@ -130,9 +129,8 @@ class FileLogger implements LoggerInterface
      */
     public function withMode(int $model): static
     {
-        if (in_array($model, [static::MODE_NORMAL, static::MODE_DEBUG, static::MODE_IGNORE]) === false) {
-            throw new LogException("Mode is not supported");
-        }
+        ! in_array($model, [static::MODE_NORMAL, static::MODE_DEBUG, static::MODE_IGNORE]) &&
+        throw new LogException("Failed to set mode, $model is not a valid type");
 
         $this->mode = $model;
 
@@ -151,12 +149,12 @@ class FileLogger implements LoggerInterface
         switch ($this->mode) {
             case static::MODE_NORMAL:
                 $this->buffer[] = $content;
-                if ($this->checkSize() === false) {
+                if (! $this->checkSize()) {
                     $this->flushBuffer();
                 }
                 break;
             case static::MODE_DEBUG:
-                echo "{$content}\n";
+                echo "$content\n";
                 break;
             case static::MODE_IGNORE:
                 break;
@@ -172,7 +170,7 @@ class FileLogger implements LoggerInterface
     protected function parseContext(string $message, array $context): string
     {
         return str_replace(
-            array_map(fn ($key) => "{{$key}}", array_keys($context)),
+            array_map(fn ($key) => "\{$key\}", array_keys($context)),
             array_values($context),
             $message
         );
@@ -214,7 +212,7 @@ class FileLogger implements LoggerInterface
      */
     public function flushBuffer(): void
     {
-        if (empty($this->buffer) === true) {
+        if (empty($this->buffer)) {
             return;
         }
 
@@ -233,7 +231,7 @@ class FileLogger implements LoggerInterface
      */
     protected function getFilename(): string
     {
-        return "{$this->path}/" . date('Ymd') . '.log';
+        return "$this->path/" . date('Ymd') . '.log';
     }
 
     /**

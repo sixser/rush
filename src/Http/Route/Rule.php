@@ -47,13 +47,12 @@ class Rule
      */
     public function __construct(string $path, string|Closure $target, array $methods = [], array $middlewares = [])
     {
-        if (!$target instanceof Closure && str_contains($target, '@') === false) {
-            throw new HttpException("Router target is not accessible");
-        }
+        ! ($target instanceof Closure || str_contains($target, '@')) &&
+        throw new HttpException("Fail to make route rule, target is not accessible.");
 
         $this->path = trim($path);
         $this->target = $target;
-        $this->methods = array_map(fn ($method) => strtoupper(trim($method)), $methods);
+        $this->methods = array_map(fn ($method) => strtoupper($method), $methods);
         $this->middlewares = $middlewares;
     }
 

@@ -12,6 +12,10 @@ use Rush\Http\Processor;
 use Rush\Ioc\Container;
 use Rush\Ioc\IocException;
 
+/**
+ * Class CookieLauncher
+ * @package Rush\Http\Middleware
+ */
 class CookieLauncher extends Processor
 {
     /**

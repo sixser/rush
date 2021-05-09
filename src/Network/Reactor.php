@@ -92,7 +92,7 @@ class Reactor
      */
     public static function getInstance(): Reactor
     {
-        if (isset(static::$instance) === false) {
+        if (! isset(static::$instance)) {
             static::$instance = new static();
             static::$instance->init();
         }
@@ -118,38 +118,39 @@ class Reactor
      * @return bool|int
      * @throws NetworkException
      */
-    public function add(mixed $fd, int $what, Closure $cb, mixed $arg = null): bool|int
+    public function add(mixed $fd, int $what, Closure $cb, mixed $arg = null): int|null
     {
         switch ($what) {
             case static::READ:
             case static::WRITE:
-            $event = new Event($this->base, $fd, $what, $cb, $arg);
-            if ($event->add() === false) {
-                return false;
-            }
+                $event = new Event($this->base, $fd, $what, $cb, $arg);
 
-            $this->ios[(int) $fd][$what] = $event;
-            return true;
+                ! $event->add() &&
+                throw new NetworkException("Failed to add event, an error occurred while adding $what.");
+
+                $this->ios[(int) $fd][$what] = $event;
+
+                return null;
             case static::SIGNAL:
                 $event = Event::signal($this->base, $fd, $cb, $arg);
-                if ($event->addSignal() === false) {
-                    return false;
-                }
+
+                ! $event->addSignal() &&
+                throw new NetworkException("Failed to add event, an error occurred while adding $fd.");
 
                 $this->signals[$fd] = $event;
 
-                return true;
+                return null;
             case static::TIMER:
                 $event = Event::timer($this->base, $cb, $arg);
-                if ($event->addTimer($fd) === false) {
-                    return 0;
-                }
+
+                ! $event->addTimer($fd) &&
+                throw new NetworkException("Failed to add event, an error occurred while adding $fd.");
 
                 $this->timers[$this->timer_recorder] = $event;
 
                 return $this->timer_recorder++;
             default:
-                throw new NetworkException("Event type is not exist");
+                throw new NetworkException("Failed to add event, $what is not supported type.");
         }
     }
 
@@ -157,49 +158,46 @@ class Reactor
      * Remove a event
      * @param mixed $fd Socket resource, signal num or timeout.
      * @param int $what Type of event.
-     * @return bool
+     * @return void
      * @throws NetworkException
      */
-    public function del(mixed $fd, int $what): bool
+    public function del(mixed $fd, int $what): void
     {
         switch ($what) {
             case static::READ:
             case static::WRITE:
-                if (isset($this->ios[(int) $fd][$what]) === true) {
-                    if ($this->ios[(int) $fd][$what]->del() === false) {
-                        return false;
-                    }
+                if (isset($this->ios[(int) $fd][$what])) {
+                    ! $this->ios[(int) $fd][$what]->del()  &&
+                    throw new NetworkException("Failed to delete event, an error occurred while deleting $what.");
 
                     unset($this->ios[(int) $fd][$what]);
                 }
 
-                if (empty($this->ios[(int) $fd]) === true) {
+                if (empty($this->ios[(int) $fd])) {
                     unset($this->ios[(int) $fd]);
                 }
 
-                return true;
+                return;
             case static::SIGNAL:
-                if (isset($this->signals[$fd]) === true) {
-                    if ($this->signals[$fd]->del() === false) {
-                        return false;
-                    }
+                if (isset($this->signals[$fd])) {
+                    ! $this->signals[$fd]->del() &&
+                    throw new NetworkException("Failed to delete event, an error occurred while deleting $fd.");
 
                     unset($this->signals[$fd]);
                 }
 
-                return true;
+                return;
             case static::TIMER:
-                if (isset($this->timers[$fd]) === true) {
-                    if ($this->timers[$fd]->del() === false) {
-                        return false;
-                    }
+                if (isset($this->timers[$fd])) {
+                    ! $this->timers[$fd]->del() &&
+                    throw new NetworkException("Failed to delete timer, an error occurred while deleting $fd.");
 
                     unset($this->timers[$fd]);
                 }
 
-                return true;
+                return;
             default:
-                throw new NetworkException("Event type is not exist");
+                throw new NetworkException("Failed to add event, $what is not supported type.");
         }
     }
 

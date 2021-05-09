@@ -145,16 +145,16 @@ class Server
      */
     public function listen(): void
     {
-        if (static::$os === OS_TYPE_LINUX) {
+        if (OS_TYPE_LINUX === static::$os) {
             stream_context_set_option($this->context, 'socket', 'so_reuseport', 1);
         }
 
         $address = sprintf("%s://%s:%d", $this->transport, $this->ip, $this->port);
         $flags = STREAM_SERVER_BIND | STREAM_SERVER_LISTEN;
         $this->socket = stream_socket_server($address, $errno, $msg, $flags, $this->context);
-        if (is_resource($this->socket) === false) {
-            throw new NetworkException($msg);
-        }
+
+        ! is_resource($this->socket) &&
+        throw new NetworkException("Failed to listen port, $msg");
 
         stream_set_blocking($this->socket, false);
 
@@ -168,7 +168,9 @@ class Server
      */
     public function resumeAccept(): void
     {
-        Reactor::getInstance()->add($this->socket, Reactor::READ, Closure::fromCallable([$this, 'acceptTcp']));
+        Reactor::getInstance()->add(
+            $this->socket, Reactor::READ, Closure::fromCallable([$this, 'acceptTcp'])
+        );
     }
 
     /**
@@ -261,7 +263,7 @@ class Server
      */
     protected static function installSignal(): void
     {
-        if (static::$os !== OS_TYPE_LINUX) {
+        if (OS_TYPE_LINUX !== static::$os) {
             return;
         }
 
@@ -316,7 +318,7 @@ class Server
                 posix_kill($pid, SIGUSR1);
             }
         } else {
-            foreach (static::$workers as $id => $worker) {
+            foreach (static::$workers as $worker) {
                 $worker->pauseAccept();
             }
 
@@ -384,9 +386,8 @@ class Server
      */
     public function setProtocol(string $protocol): void
     {
-        if (class_exists($protocol) === false) {
-            throw new NetworkException("Protocol is not exist");
-        }
+        ! class_exists($protocol) &&
+        throw new NetworkException("Failed to set Protocol, $protocol is not exist");
 
         $this->protocol = $protocol;
     }

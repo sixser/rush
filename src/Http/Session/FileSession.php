@@ -30,9 +30,10 @@ class FileSession extends SessionAbstract
     public function read(string $id): void
     {
         $filename = static::getKey($id);
-        if (empty($id) === true ||
-            file_exists($filename) === false ||
-            ($content = file_get_contents($filename)) === false
+        if (
+            empty($id) ||
+            ! file_exists($filename) ||
+            false === ($content = file_get_contents($filename))
         ) {
             $this->data = [];
             $this->id = static::generateIdentity();
@@ -56,7 +57,7 @@ class FileSession extends SessionAbstract
      */
     public function write(): void
     {
-        if (empty($this->id) === true) {
+        if (empty($this->id)) {
             $this->id = static::generateIdentity();
         }
 
@@ -73,11 +74,7 @@ class FileSession extends SessionAbstract
     public function destroy(): void
     {
         $filename = static::getKey($this->id);
-        if (is_file($filename) === true &&
-            file_exists($filename) === true
-        ) {
-            unlink($filename);
-        }
+        is_file($filename) && file_exists($filename) && unlink($filename);
 
         $this->id = static::generateIdentity();
         $this->data = [];

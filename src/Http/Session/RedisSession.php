@@ -48,8 +48,9 @@ class RedisSession extends SessionAbstract
     public function read(string $id): void
     {
         $key = static::getKey($id);
-        if (empty($id) === true ||
-            is_string($content = $this->instance->get($key)) === false
+        if (
+            empty($id) ||
+            ! is_string($content = $this->instance->get($key))
         ) {
             $this->data = [];
             $this->id = static::generateIdentity();
@@ -65,7 +66,7 @@ class RedisSession extends SessionAbstract
      */
     public function write(): void
     {
-        if (empty($this->id) === true) {
+        if (empty($this->id)) {
             $this->id = static::generateIdentity();
         }
 

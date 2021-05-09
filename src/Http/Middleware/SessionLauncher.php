@@ -40,7 +40,7 @@ class SessionLauncher extends Processor
         if (0 !== strcmp($oldSessionId, $newSessionId)) {
             $value = sprintf(
                 "%s=%s;path=/;expires=%s",
-                $sessionName, $newSessionId, gmstrftime("%A, %d-%b-%Y %H:%M:%S GMT",time()+9600)
+                $sessionName, $newSessionId, gmstrftime("%A, %d-%b-%Y %H:%M:%S GMT",time() + 9600)
             );
             $response->withHeader('Set-Cookie', $value);
         }

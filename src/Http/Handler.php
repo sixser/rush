@@ -56,11 +56,11 @@ class Handler
      */
     public function handle(Request $request): Response
     {
-        if (is_null($this->target) === true) {
+        if (is_null($this->target)) {
             $this->dispatch($request->getUri(), $request->getMethod());
         }
 
-        if (empty($this->middlewares) === true) {
+        if (empty($this->middlewares)) {
             return $this->call($request);
         }
 
@@ -78,7 +78,7 @@ class Handler
      */
     protected function dispatch(string $uri, string $method): void
     {
-        if ($this->router instanceof Router === false) {
+        if (! $this->router instanceof Router) {
             return;
         }
 
@@ -95,9 +95,9 @@ class Handler
      */
     protected function call(Request $request): Response
     {
-        if (is_callable($this->target) === true) {
+        if (is_callable($this->target)) {
             $response =  call_user_func($this->target, $request);
-        } elseif (is_string($this->target) === true) {
+        } elseif (is_string($this->target)) {
             [$class, $method] = explode('@', $this->target);
             $response = Container::getInstance()->make($class)->$method($request);
         } else {

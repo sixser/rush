@@ -152,9 +152,9 @@ class Connection implements ConnectionInterface
     {
         foreach ($bindings as $key => $val) {
             $statement->bindValue(
-                is_numeric($key) === true ? $key + 1 : $key,
+                is_numeric($key) ? $key + 1 : $key,
                 $val,
-                is_int($val) === true ? PDO::PARAM_INT : PDO::PARAM_STR
+                is_int($val) ? PDO::PARAM_INT : PDO::PARAM_STR
             );
         }
     }
@@ -169,10 +169,8 @@ class Connection implements ConnectionInterface
     {
         $statement->execute();
 
-        if ($statement->errorCode() !== '00000') {
-            $error = implode(' ', $statement->errorInfo());
-            throw new DatabaseException("Fail to execute SQL statement({$error})");
-        }
+        '00000' !== $statement->errorCode() &&
+        throw new DatabaseException("Fail to execute SQL statement, ". implode(' ', $statement->errorInfo()));
     }
 
     /**
@@ -185,7 +183,7 @@ class Connection implements ConnectionInterface
      */
     protected function record(string $query, array $binding, float $start): void
     {
-        if (is_null($this->logger) === true) {
+        if (is_null($this->logger)) {
             return;
         }
 
@@ -202,7 +200,7 @@ class Connection implements ConnectionInterface
      */
     public function transaction(): bool
     {
-        return $this->instance->inTransaction() === true;
+        return $this->instance->inTransaction();
     }
 
     /**
@@ -211,7 +209,7 @@ class Connection implements ConnectionInterface
      */
     public function begin(): bool
     {
-        return $this->instance->beginTransaction() === true;
+        return $this->instance->beginTransaction();
     }
 
     /**
@@ -220,7 +218,7 @@ class Connection implements ConnectionInterface
      */
     public function rollback(): bool
     {
-        return $this->instance->rollBack() === true;
+        return $this->instance->rollBack();
     }
 
     /**
@@ -229,7 +227,7 @@ class Connection implements ConnectionInterface
      */
     public function commit(): bool
     {
-        return $this->getPdo()->commit() === true;
+        return $this->getPdo()->commit();
     }
 
     /**

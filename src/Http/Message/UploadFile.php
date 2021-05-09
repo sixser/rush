@@ -113,27 +113,23 @@ class UploadFile
     /**
      * Move the uploaded file to a new location
      * @param string $targetPath Path to which to move the uploaded file.
-     * @return bool
+     * @return void
      * @throws HttpException
      */
-    public function moveTo(string $targetPath): bool
+    public function moveTo(string $targetPath): void
     {
         $dir = dirname($targetPath);
-        if (is_dir($dir) === false && mkdir($dir, 0777, true) === false) {
-            throw new HttpException("Fail to create directory({$dir})");
-        }
 
-        if ($this->status === false) {
-            throw new HttpException("File has been moved");
-        }
+        ! is_dir($dir) && ! mkdir($dir, 0777, true) &&
+        throw new HttpException("Failed to move file, an error occurred while making $dir.");
 
-        if (rename($this->path, $targetPath) === false) {
-            return false;
-        }
+        false === $this->status &&
+        throw new HttpException("Failed to move file, $this->path has been moved.");
+
+        ! rename($this->path, $targetPath) &&
+        throw new HttpException("Failed to move file, an error occurred while moving to $targetPath.");
 
         $this->status = false;
-
-        return true;
     }
 
     /**
@@ -142,7 +138,7 @@ class UploadFile
      */
     public function isMoved(): bool
     {
-        return $this->status === false;
+        return false === $this->status;
     }
 
     /**
@@ -150,6 +146,6 @@ class UploadFile
      */
     public function __destruct()
     {
-        if (file_exists($this->path) === true) unlink($this->path);
+        file_exists($this->path) && unlink($this->path);
     }
 }

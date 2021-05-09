@@ -27,7 +27,7 @@ class Repository
      */
     public function __construct()
     {
-        if (isset(static::$tree) === false) {
+        if (! isset(static::$tree)) {
             static::$tree = new ConfigItem();
         }
     }
@@ -41,14 +41,13 @@ class Repository
      */
     public function load(string|array $origin, string $name = ''): void
     {
-        if (is_string($origin) === true) {
+        if (is_string($origin)) {
             $name = pathinfo($origin, PATHINFO_FILENAME);
             $origin = $this->parseFile($origin);
         }
 
-        if (empty($name) === true) {
-            throw new ConfigException('Config item name cannot be empty');
-        }
+        empty($name) &&
+        throw new ConfigException('Failed to load config, sub-set name cannot be empty.');
 
         static::$tree->set($name, static::build($origin));
     }
@@ -61,18 +60,13 @@ class Repository
      */
     protected function parseFile(string $filename): array
     {
-        if (is_file($filename) === false) {
-            throw new ConfigException('$filename must be the full name of the file');
-        }
-
-        if (file_exists($filename) === false) {
-            throw new ConfigException("{$filename} is not exist");
-        }
+        ! (is_file($filename) || file_exists($filename)) &&
+        throw new ConfigException("Failed to parse config, $filename is not a valid file.");
 
         $ext = pathinfo($filename, PATHINFO_EXTENSION);
-        if (in_array($ext, static::$file_type) === false) {
-            throw new ConfigException('For file type, .php .ini .yam and .yaml are supported');
-        }
+
+        ! in_array($ext, static::$file_type) &&
+        throw new ConfigException("Failed to parse config, $ext is not a supported format.");
 
         $content = match ($ext) {
             'php' => include $filename,
@@ -80,9 +74,8 @@ class Repository
             'yam', 'yaml' => yaml_parse_file($filename)
         };
 
-        if (is_array($content) === false) {
-            throw new ConfigException("Fail to parse file({$filename})");
-        }
+        ! is_array($content) &&
+        throw new ConfigException("Failed to parse config, $filename content is not a valid format.");
 
         return $content;
     }
@@ -116,19 +109,17 @@ class Repository
     {
         $item = static::$tree;
 
-        $list = explode('.', $name);
-
         do {
-            $name = array_shift($list);
-            if ($item->exist($name) === false) {
-                return false;
+            $point = strpos($name, '.');
+            if (false === $point) {
+                return $item->exist($name);
             }
 
-            if (count($list) === 0) {
-                return true;
-            }
+            $subName = substr($name, 0, $point);
 
-            $item = $item->get($name);
+            $item = $item->get($subName);
+
+            $name = substr($name, ++$point);
         } while (true);
     }
 
@@ -142,16 +133,17 @@ class Repository
     {
         $item = static::$tree;
 
-        $list = explode('.', $name);
-
         do {
-            $name = array_shift($list);
-
-            $item = $item->get($name);
-
-            if (count($list) === 0) {
-                return $item;
+            $point = strpos($name, '.');
+            if (false === $point) {
+                return $item->get($name);
             }
+
+            $subName = substr($name, 0, $point);
+
+            $item = $item->get($subName);
+
+            $name = substr($name, ++$point);
         } while (true);
     }
 }

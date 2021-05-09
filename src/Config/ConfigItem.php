@@ -5,138 +5,104 @@ declare(strict_types = 1);
 namespace Rush\Config;
 
 use ArrayIterator;
-use Countable;
 use IteratorAggregate;
 
 /**
  * Class ConfigItem
  * @package Rush\Config
  */
-class ConfigItem implements Countable, IteratorAggregate
+class ConfigItem implements IteratorAggregate
 {
     /**
-     * Current ConfigItem Value
+     * Item Data
      * @var bool|int|string|null
      */
-    protected bool|int|string|null $value;
+    protected bool|int|string|null $data;
 
     /**
-     * Child Options
-     * @var array
+     * Subset
+     * @var ConfigItem[]
      */
-    protected array $options = [];
+    protected array $subset = [];
 
     /**
      * ConfigItem constructor
-     * @param bool|int|string|null $value
+     * @param bool|int|string|null $data
      */
-    public function __construct(bool|int|string|null $value = null)
+    public function __construct(bool|int|string|null $data = null)
     {
-        $this->value = $value;
+        $this->data = $data;
+    }
+
+    /**
+     * Convert current data to bool
+     * @return bool
+     */
+    public function bool(): bool
+    {
+        return (bool) $this->data;
+    }
+
+    /**
+     * Convert current data to int
+     * @return int
+     */
+    public function int(): int
+    {
+        return (int) $this->data;
+    }
+
+    /**
+     * Convert current data to string
+     * @return string
+     */
+    public function string(): string
+    {
+        return (string) $this->data;
     }
 
     /**
      * Determines whether an option is present in the cache
-     * @param string $name Name of configuration option.
+     * @param string $name Name of sub-item.
      * @return bool
      */
     public function exist(string $name): bool
     {
-        return isset($this->options[$name]) === true;
+        return isset($this->subset[$name]);
     }
 
     /**
-     * Obtain configuration options from the item
-     * @param string $name Name of configuration option.
+     * Obtain configuration sub-item from the item
+     * @param string $name Name of sub-item.
      * @return ConfigItem
      * @throws ConfigException
      */
     public function get(string $name): ConfigItem
     {
-        if (isset($this->options[$name]) === false) {
-            throw new ConfigException('Current options is not exist');
-        }
+        ! isset($this->subset[$name]) &&
+        throw new ConfigException("Failed to obtain config, $name is not exist.");
 
-        return $this->options[$name];
+        return $this->subset[$name];
     }
 
     /**
-     * Set configuration options on the item
-     * @param int|string $name Name of configuration option.
-     * @param ConfigItem $item The child item.
+     * Set subset of the item
+     * @param int|string $name Name of sub-item.
+     * @param ConfigItem $item The sub-item.
      * @return void
      */
     public function set(int|string $name, ConfigItem $item): void
     {
-        $this->options[$name] = $item;
+        $this->subset[$name] = $item;
     }
 
     /**
-     * Convert current item value to bool
-     * @return bool
-     * @throws ConfigException
+     * Get current subset
+     * @return ConfigItem[]
      */
-    public function toBool(): bool
+    public function getSubset(): array
     {
-        if (is_null($this->value) === true) {
-            throw new ConfigException('Current options is not a leaf of the tree');
-        }
-
-        return (bool) $this->value;
-    }
-
-    /**
-     * Convert current item value to int
-     * @return int
-     * @throws ConfigException
-     */
-    public function toInt(): int
-    {
-        if (is_null($this->value) === true) {
-            throw new ConfigException('Current options is not a leaf of the tree');
-        }
-
-        return (int) $this->value;
-    }
-
-    /**
-     * Convert current item value to string
-     * @return string
-     * @throws ConfigException
-     */
-    public function toString(): string
-    {
-        if (is_null($this->value) === true) {
-            throw new ConfigException('Current options is not a leaf of the tree');
-        }
-
-        return (string) $this->value;
-    }
-
-    /**
-     * Convert child options to array
-     * @return bool|int|string|array|null
-     */
-    public function toArray(): bool|int|string|array|null
-    {
-        if (empty($this->options) === true) {
-            return $this->value;
-        }
-
-        $options = [];
-        foreach ($this->options as $key => $value) {
-            $options[$key] = $value->toArray();
-        }
-
-        return $options;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function count(): int
-    {
-        return count($this->options);
+        return $this->subset;
     }
 
     /**
@@ -144,6 +110,6 @@ class ConfigItem implements Countable, IteratorAggregate
      */
     public function getIterator(): ArrayIterator
     {
-        return new ArrayIterator($this->options);
+        return new ArrayIterator($this->subset);
     }
 }

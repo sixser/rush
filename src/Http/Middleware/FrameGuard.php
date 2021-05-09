@@ -9,6 +9,10 @@ use Rush\Http\Message\Request;
 use Rush\Http\Message\Response;
 use Rush\Http\Processor;
 
+/**
+ * Class FrameGuard
+ * @package Rush\Http\Middleware
+ */
 class FrameGuard extends Processor
 {
     /**

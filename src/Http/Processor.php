@@ -6,6 +6,7 @@ namespace Rush\Http;
 
 use Rush\Http\Message\Request;
 use Rush\Http\Message\Response;
+use Rush\Ioc\IocException;
 
 /**
  * Class Processor
@@ -19,6 +20,7 @@ class Processor
      * @param Handler $handler Http handler.
      * @return Response
      * @throws HttpException
+     * @throws IocException
      */
     public function process(Request $request, Handler $handler): Response
     {

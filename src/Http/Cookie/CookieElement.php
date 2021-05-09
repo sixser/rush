@@ -68,12 +68,6 @@ class CookieElement implements Stringable
     protected string $same_site = 'none';
 
     /**
-     * Cookie SameSite Options
-     * @var array|string[]
-     */
-    protected array $same_site_options = ['none', 'lax', 'strict'];
-
-    /**
      * CookieElement constructor
      * @param string $name Cookie name.
      * @param string $value Cookie value.
@@ -81,9 +75,8 @@ class CookieElement implements Stringable
      */
     public function __construct(string $name, string $value)
     {
-        if (empty($name) === true) {
-            throw new HttpException('Cookie name cannot be empty');
-        }
+        empty($name) &&
+        throw new HttpException("Failed to make cookie, name cannot be empty.");
 
         $this->name = $name;
         $this->value = $value;
@@ -96,7 +89,9 @@ class CookieElement implements Stringable
      */
     public function withExpire(int $time): static
     {
-        $this->expire = gmstrftime("%A, %d-%b-%Y %H:%M:%S GMT", time() + $time);
+        $this->expire = gmstrftime(
+            "%A, %d-%b-%Y %H:%M:%S GMT", time() + $time
+        );
 
         return $this;
     }
@@ -170,9 +165,9 @@ class CookieElement implements Stringable
     public function withSameSite(string $sameSite): static
     {
         $sameSite = strtolower($sameSite);
-        if (in_array($sameSite, $this->same_site_options) === false) {
-            throw new HttpException('Cookie sameSite must be none, lax and strict');
-        }
+
+        ! in_array($sameSite, ['none', 'lax', 'strict']) &&
+        throw new HttpException("Failed to set SameSite, $sameSite is not a valid value.");
 
         $this->same_site = $sameSite;
 
@@ -185,14 +180,14 @@ class CookieElement implements Stringable
      */
     public function getContent(): string
     {
-        $raw = "{$this->name}={$this->value}";
-        $raw .= empty($this->expire) === true ? '' : "; Expires:{$this->expire}";
-        $raw .= $this->permanent === false ? '' : "; Max-Age:{$this->expire}";
-        $raw .= empty($this->domain) === true ? '' : "; Domain:{$this->domain}";
-        $raw .= empty($this->path) === true ? '' : "; Path:{$this->path}";
-        $raw .= $this->secure === false ? '' : "; Secure";
-        $raw .= $this->http_only === false ? '' : "; HttpOnly";
-        $raw .= empty($this->same_site) === true ? '' : "; SameSite:{$this->same_site}";
+        $raw = "$this->name=$this->value";
+        $raw .= empty($this->expire) ? '' : "; Expires:$this->expire";
+        $raw .= false === $this->permanent ? '' : "; Max-Age:$this->expire";
+        $raw .= empty($this->domain) ? '' : "; Domain:$this->domain";
+        $raw .= empty($this->path) ? '' : "; Path:$this->path";
+        $raw .= false === $this->secure ? '' : "; Secure";
+        $raw .= false === $this->http_only ? '' : "; HttpOnly";
+        $raw .= empty($this->same_site) ? '' : "; SameSite:$this->same_site";
 
         return $raw;
     }

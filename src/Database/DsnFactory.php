@@ -46,7 +46,6 @@ class DsnFactory
      * @param string $host Postgresql server ip.
      * @param int $port Postgresql server port.
      * @param string $dbname Database name.
-     * @param string $charset Database charset.
      * @return string
      */
     public static function createPgsqlDsn(string $host, int $port, string $dbname): string

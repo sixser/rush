@@ -5,14 +5,12 @@ declare(strict_types = 1);
 namespace Rush\Database\Collection;
 
 use ArrayAccess;
-use ArrayIterator;
-use IteratorAggregate;
 
 /**
- * Class CookieElement
- * @package Sixser\Database\Collection
+ * Class Record
+ * @package Rush\Database\Collection
  */
-class Record implements ArrayAccess, IteratorAggregate
+class Record implements ArrayAccess
 {
     /**
      * CookieElement constructor
@@ -105,13 +103,5 @@ class Record implements ArrayAccess, IteratorAggregate
     public function offsetUnset($offset): void
     {
         $this->del($offset);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function getIterator(): ArrayIterator
-    {
-        return new ArrayIterator($this);
     }
 }

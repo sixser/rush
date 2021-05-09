@@ -11,7 +11,6 @@ use ReflectionFunction;
 use ReflectionFunctionAbstract;
 use ReflectionMethod;
 use ReflectionParameter;
-use Throwable;
 
 /**
  * Class Container
@@ -65,9 +64,7 @@ class Container
      */
     public static function getInstance(): Container
     {
-        if (isset(static::$instance) === false) {
-            static::$instance = new static();
-        }
+        ! isset(static::$instance) && (static::$instance = new static());
 
         return static::$instance;
     }
@@ -84,18 +81,18 @@ class Container
     {
         $name = $this->fetch($name);
 
-        if ($isNew === false && isset(static::$pool[$name]) === true) {
+        if (false === $isNew && isset(static::$pool[$name])) {
             return static::$pool[$name];
         }
 
         try {
-            if (isset(static::$well[$name]) === true && static::$well[$name] instanceof Closure) {
+            if (isset(static::$well[$name]) && static::$well[$name] instanceof Closure) {
                 return static::$pool[$name] = $this->invokeFunc(static::$well[$name], $vars);
             } else {
                 return static::$pool[$name] = $this->invokeClass($name, $vars);
             }
-        } catch (Throwable $th) {
-            throw new IocException($th->getMessage());
+        } catch (ReflectionException $ex) {
+            throw new IocException("Failed to make instance, " . $ex->getMessage());
         }
     }
 
@@ -104,8 +101,8 @@ class Container
      * @param Closure $name Closure name.
      * @param array $vars Parameters to initiate the closure.
      * @return object
-     * @throws ReflectionException
      * @throws IocException
+     * @throws ReflectionException
      */
     protected function invokeFunc(Closure $name, array $vars): object
     {
@@ -123,8 +120,8 @@ class Container
      * @param string $name Class name.
      * @param array $vars Parameters to initiate the class.
      * @return object
-     * @throws ReflectionException
      * @throws IocException
+     * @throws ReflectionException
      */
     protected function invokeClass(string $name, array $vars): object
     {
@@ -133,7 +130,7 @@ class Container
         $this->parseAttribute($reflectClass);
 
         $constructor = $reflectClass->getConstructor();
-        if ($constructor instanceof ReflectionMethod && $constructor->isPublic() === true) {
+        if ($constructor instanceof ReflectionMethod && true === $constructor->isPublic()) {
             $args = $this->parseArgs($constructor, $vars);
             return $reflectClass->newInstanceArgs($args);
         }
@@ -146,12 +143,15 @@ class Container
      * @param ReflectionFunctionAbstract $reflect Reflection object.
      * @param array $vars Parameters to initiate the closure.
      * @return array
-     * @throws ReflectionException
      * @throws IocException
+     * @throws ReflectionException
      */
     protected function parseArgs(ReflectionFunctionAbstract $reflect, array $vars): array
     {
-        return array_map(fn($param) => $this->parseParameter($param, $vars), $reflect->getParameters());
+        return array_map(
+            fn($param) => $this->parseParameter($param, $vars),
+            $reflect->getParameters()
+        );
     }
 
     /**
@@ -159,31 +159,31 @@ class Container
      * @param ReflectionParameter $parameter Reflection object.
      * @param array $vars Arguments
      * @return mixed
-     * @throws ReflectionException
      * @throws IocException
+     * @throws ReflectionException
      */
     protected function parseParameter(ReflectionParameter $parameter, array $vars): mixed
     {
         $name = $parameter->getName();
-        if (isset($vars[$name]) === true) {
+        if (isset($vars[$name])) {
             return $vars[$name];
         }
 
-        if ($parameter->hasType() === true) {
+        if ($parameter->hasType()) {
             $types = ltrim((string)$parameter->getType(), '?');
             $types = array_diff(explode('|', $types) ?: [], ['bool', 'int', 'float', 'string', 'array', 'mixed']);
             foreach ($types as $type) {
-                if (class_exists($type) === true) {
+                if (class_exists($type)) {
                     return $this->get($type);
                 }
             }
         }
 
-        if ($parameter->isDefaultValueAvailable() === true) {
+        if ($parameter->isDefaultValueAvailable()) {
             return $parameter->getDefaultValue();
         }
 
-        throw new IocException("Method parameters missing($name)");
+        throw new IocException("Failed to parse parameter, $name is missing.");
     }
 
     /**
@@ -214,7 +214,7 @@ class Container
      */
     public function look(string $name): bool
     {
-        return isset(static::$well[$name]) === true;
+        return isset(static::$well[$name]);
     }
 
     /**
@@ -224,7 +224,7 @@ class Container
      */
     public function fetch(string $name): string
     {
-        if (isset(static::$well[$name]) === true && is_string(static::$well[$name]) === true) {
+        if (isset(static::$well[$name]) && is_string(static::$well[$name])) {
             return $this->fetch(static::$well[$name]);
         }
 
@@ -249,7 +249,7 @@ class Container
      */
     public function has(string $id): bool
     {
-        return isset(static::$pool[$id]) === true;
+        return isset(static::$pool[$id]);
     }
 
     /**
