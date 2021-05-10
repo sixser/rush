@@ -24,28 +24,10 @@ class Handler
     protected array $middlewares = [];
 
     /**
-     * Http Router
-     * @var Router|null
-     */
-    protected Router|null $router = null;
-
-    /**
      * Route Target
      * @var string|Closure|null
      */
     protected string|Closure|null $target = null;
-
-    /**
-     * Set http router
-     * @param Router $router Http router.
-     * @return static
-     */
-    public function withRouter(Router $router): static
-    {
-        $this->router = $router;
-
-        return $this;
-    }
 
     /**
      * Handle http request
@@ -78,13 +60,9 @@ class Handler
      */
     protected function dispatch(string $uri, string $method): void
     {
-        if (! $this->router instanceof Router) {
-            return;
-        }
-
         $path = (string) parse_url($uri, PHP_URL_PATH);
 
-        [$this->target, $this->middlewares] = $this->router->parse($path, $method);
+        [$this->target, $this->middlewares] = Router::parse($path, $method);
     }
 
     /**
